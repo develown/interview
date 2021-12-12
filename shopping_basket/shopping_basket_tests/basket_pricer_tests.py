@@ -99,8 +99,8 @@ def test_merge_discount_col(basket_pricer):
             "Discount_right",
         ],
     )
-    applicable_items = basket_pricer.merge_discount_col(
-        applicable_items_suffix
+    applicable_items = basket_pricer.merge_col(
+        "Discount", applicable_items_suffix
     )
     assert applicable_items.shape == (1, 6)
     assert sum(applicable_items["Discount"]) == 1.0
@@ -115,8 +115,8 @@ def test_merge_discount_col(basket_pricer):
             "Discount",
         ],
     )
-    applicable_items = basket_pricer.merge_discount_col(
-        applicable_items_nosuffix
+    applicable_items = basket_pricer.merge_col(
+        "Discount", applicable_items_nosuffix
     )
     assert applicable_items.shape == (1, 6)
     assert sum(applicable_items["Discount"]) == 1.0
@@ -125,10 +125,17 @@ def test_merge_discount_col(basket_pricer):
 def test_get_multi_cheapest_discounts(basket_pricer):
     applicable_items_sameprice = pd.DataFrame(
         [
-            ["Shampoo (Large)", 2, 1.5, 8, 3.0],
-            ["Shampoo (Medium)", 1, 1.5, 8, 1.5],
+            ["Shampoo (Large)", 2, 1.5, 8, 3.0, 0],
+            ["Shampoo (Medium)", 1, 1.5, 8, 1.5, 0],
         ],
-        columns=["Item", "Quantity", "Price", "CategoryCode", "Sub Total"],
+        columns=[
+            "Item",
+            "Quantity",
+            "Price",
+            "CategoryCode",
+            "Sub Total",
+            "Amount Free",
+        ],
     )
     offer = json.loads(
         "".join(open("../test_data/offers.json", "r").readlines())
@@ -136,14 +143,21 @@ def test_get_multi_cheapest_discounts(basket_pricer):
     applicable_items = basket_pricer.get_multi_cheapest_discounts(
         applicable_items_sameprice, offer
     ).fillna(0)
-    assert applicable_items.shape == (2, 2)
+    assert applicable_items.shape == (2, 3)
     assert sum(applicable_items["Discount"]) == 1.5
     applicable_items_diffrentprice = pd.DataFrame(
         [
-            ["Shampoo (Large)", 2, 1.5, 8, 3.0],
-            ["Shampoo (Medium)", 1, 1, 8, 1],
+            ["Shampoo (Large)", 2, 1.5, 8, 3.0, 0],
+            ["Shampoo (Medium)", 1, 1, 8, 1, 0],
         ],
-        columns=["Item", "Quantity", "Price", "CategoryCode", "Sub Total"],
+        columns=[
+            "Item",
+            "Quantity",
+            "Price",
+            "CategoryCode",
+            "Sub Total",
+            "Amount Free",
+        ],
     )
     offer = json.loads(
         "".join(open("../test_data/offers.json", "r").readlines())
@@ -151,14 +165,21 @@ def test_get_multi_cheapest_discounts(basket_pricer):
     applicable_items = basket_pricer.get_multi_cheapest_discounts(
         applicable_items_diffrentprice, offer
     ).fillna(0)
-    assert applicable_items.shape == (2, 2)
+    assert applicable_items.shape == (2, 3)
     assert sum(applicable_items["Discount"]) == 1
 
 
 def test_general_discounts(basket_pricer):
     applicable_items_nodiscount = pd.DataFrame(
-        [["Sardines", 2, 1.89, 3, 3.78]],
-        columns=["Item", "Quantity", "Price", "CategoryCode", "Sub Total"],
+        [["Sardines", 2, 1.89, 3, 3.78, 0]],
+        columns=[
+            "Item",
+            "Quantity",
+            "Price",
+            "CategoryCode",
+            "Sub Total",
+            "Amount Free",
+        ],
     )
     offer = json.loads(
         "".join(open("../test_data/offers.json", "r").readlines())
@@ -172,8 +193,15 @@ def test_general_discounts(basket_pricer):
 
 def test_get_multi_buy_discounts(basket_pricer):
     applicable_items_nodiscount = pd.DataFrame(
-        [["Baked Beans (value)", 2, 0.99, 1, 1.98]],
-        columns=["Item", "Quantity", "Price", "CategoryCode", "Sub Total"],
+        [["Baked Beans (value)", 2, 0.99, 1, 1.98, 0]],
+        columns=[
+            "Item",
+            "Quantity",
+            "Price",
+            "CategoryCode",
+            "Sub Total",
+            "Amount Free",
+        ],
     )
     offer = json.loads(
         "".join(open("../test_data/offers.json", "r").readlines())
@@ -181,14 +209,21 @@ def test_get_multi_buy_discounts(basket_pricer):
     applicable_items = basket_pricer.get_multi_buy_discounts(
         applicable_items_nodiscount, offer
     )
-    assert applicable_items.shape == (1, 2)
+    assert applicable_items.shape == (1, 3)
     assert sum(applicable_items["Discount"]) == 0.0
     applicable_items_discount = pd.DataFrame(
-        [["Baked Beans (value)", 3, 0.99, 1, 1.98]],
-        columns=["Item", "Quantity", "Price", "CategoryCode", "Sub Total"],
+        [["Baked Beans (value)", 3, 0.99, 1, 1.98, 0]],
+        columns=[
+            "Item",
+            "Quantity",
+            "Price",
+            "CategoryCode",
+            "Sub Total",
+            "Amount Free",
+        ],
     )
     applicable_items = basket_pricer.get_multi_buy_discounts(
         applicable_items_discount, offer
     )
-    assert applicable_items.shape == (1, 2)
+    assert applicable_items.shape == (1, 3)
     assert sum(applicable_items["Discount"]) == 0.99

@@ -46,69 +46,75 @@ class BasketPricer(object):
         print("total: £{0:.2f}".format(total))
 
     def apply_offers(self, priced_basket, offer_types):
+        priced_basket["Amount Free"] = 0
         for offer_type in offer_types:
             for offer in offer_types[offer_type]:
                 applicable_items_temp = priced_basket.loc[
                     priced_basket["CategoryCode"] == offer["category"]
                 ]
                 applicable_items = applicable_items_temp[
-                    ["Item", "Quantity", "Price", "CategoryCode", "Sub Total"]
+                    [
+                        "Item",
+                        "Quantity",
+                        "Price",
+                        "CategoryCode",
+                        "Sub Total",
+                        "Amount Free",
+                    ]
                 ]
                 if applicable_items.shape[0] >= 1:
                     if offer_type == "multi_buy_free":
                         discounted_multibuy = self.get_multi_buy_discounts(
                             applicable_items, offer
                         )
-                        priced_basket = self.merge_discount_col(
-                            pd.merge(
-                                priced_basket,
-                                discounted_multibuy,
-                                on=["Item"],
-                                how="left",
-                                suffixes=("_left", "_right"),
-                            )
+                        priced_basket = self.merge_basket(
+                            priced_basket, discounted_multibuy
                         )
                     elif offer_type == "general_discount":
                         general_discount = self.get_general_discounts(
                             applicable_items, offer
                         )
-                        priced_basket = self.merge_discount_col(
-                            pd.merge(
-                                priced_basket,
-                                general_discount,
-                                on=["Item"],
-                                how="left",
-                                suffixes=("_left", "_right"),
-                            )
+                        priced_basket = self.merge_basket(
+                            priced_basket, general_discount
                         )
                     elif offer_type == "multi_buy_cheapest_free":
                         multi_cheapest = self.get_multi_cheapest_discounts(
                             applicable_items, offer
                         )
-                        priced_basket = self.merge_discount_col(
-                            pd.merge(
-                                priced_basket,
-                                multi_cheapest,
-                                on=["Item"],
-                                how="left",
-                                suffixes=("_left", "_right"),
-                            )
+                        priced_basket = self.merge_basket(
+                            priced_basket, multi_cheapest
                         )
         priced_basket = priced_basket.fillna(0)
+        priced_basket = priced_basket.drop("Amount Free", axis=1)
         return priced_basket
 
-    def merge_discount_col(self, priced_basket):
+    def merge_basket(self, priced_basket, discount_basket):
+        priced_basket = self.merge_col(
+            "Amount Free",
+            self.merge_col(
+                "Discount",
+                pd.merge(
+                    priced_basket,
+                    discount_basket,
+                    on=["Item"],
+                    how="left",
+                    suffixes=("_left", "_right"),
+                ),
+            ),
+        )
+        return priced_basket
+
+    def merge_col(self, col, priced_basket):
         if (
-            "Discount_left" in priced_basket.columns
-            and "Discount_right" in priced_basket.columns
+            col + "_left" in priced_basket.columns
+            and col + "_right" in priced_basket.columns
         ):
             priced_basket = priced_basket.fillna(0)
-            priced_basket["Discount"] = (
-                priced_basket["Discount_left"]
-                + priced_basket["Discount_right"]
+            priced_basket[col] = (
+                priced_basket[col + "_left"] + priced_basket[col + "_right"]
             )
-            priced_basket = priced_basket.drop("Discount_left", axis=1)
-            priced_basket = priced_basket.drop("Discount_right", axis=1)
+            priced_basket = priced_basket.drop(col + "_left", axis=1)
+            priced_basket = priced_basket.drop(col + "_right", axis=1)
         return priced_basket
 
     def get_multi_cheapest_discounts(self, applicable_items, offer):
@@ -125,17 +131,26 @@ class BasketPricer(object):
                 applicable_items["Price"] == discount_amount
             ].iloc[[0]]
         discount_item["Discount"] = discount_amount
+        discount_item["Amount Free"] = discount_quantity
         applicable_items = pd.merge(
             applicable_items,
             discount_item[["Item", "Discount"]],
             on="Item",
             how="left",
         )
-        return applicable_items[["Item", "Discount"]]
+        return applicable_items[["Item", "Discount", "Amount Free"]]
 
     def get_general_discounts(self, applicable_items, offer):
         applicable_items["Discount"] = round(
-            applicable_items["Sub Total"] * offer["discount"], 2
+            (
+                (
+                    applicable_items["Quantity"]
+                    - applicable_items["Amount Free"]
+                )
+                * applicable_items["Price"]
+            )
+            * offer["discount"],
+            2,
         )
         return applicable_items[["Item", "Discount"]]
 
@@ -146,10 +161,11 @@ class BasketPricer(object):
         applicable_items["Discount"] = applicable_items["Discount"].apply(
             np.floor
         )
+        applicable_items["Amount Free"] = applicable_items["Discount"]
         applicable_items["Discount"] = (
             applicable_items["Discount"] * applicable_items["Price"]
         )
-        return applicable_items[["Item", "Discount"]]
+        return applicable_items[["Item", "Discount", "Amount Free"]]
 
 
 if __name__ == "__main__":
@@ -157,5 +173,5 @@ if __name__ == "__main__":
     basket_pricer.get_discounts(
         catalog_file="../test_data/catalog.csv",
         offer_file="../test_data/offers.json",
-        basket_file="../test_data/basket_3.csv",
+        basket_file="../test_data/basket_1.csv",
     )
