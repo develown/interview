@@ -1,0 +1,28 @@
+{
+  "multi_buy_free": [
+    {
+      "category":  1,
+      "qualifying_quantity": 2,
+      "amount_free": 1
+    },
+    {
+      "category":  3,
+      "qualifying_quantity": 2,
+      "amount_free": 1
+    }
+  ],
+  "general_discount": [
+    {
+      "category":  3,
+      "qualifying_quantity": 1,
+      "discount": 0.25
+    }
+  ],
+  "multi_buy_cheapest_free": [
+    {
+      "category":  8,
+      "qualifying_quantity": 3,
+      "amount_free": 1
+    }
+  ]
+}
