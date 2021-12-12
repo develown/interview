@@ -4,11 +4,6 @@
       "category":  1,
       "qualifying_quantity": 2,
       "amount_free": 1
-    },
-    {
-      "category":  3,
-      "qualifying_quantity": 2,
-      "amount_free": 1
     }
   ],
   "general_discount": [
